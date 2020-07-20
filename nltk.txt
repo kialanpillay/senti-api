@@ -1,3 +1,4 @@
 stopwords
 twitter_samples
 reuters
+averaged_perceptron_tagger
