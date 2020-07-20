@@ -162,8 +162,9 @@ class NaiveBayes(Resource):
     @api.expect(model)
     def get(self, text):
         try:
+            result = naive_bayes(text, classifier)
             classification = {
-                "compound": naive_bayes(text, classifier),
+                "compound": result,
             }
             response = jsonify(
                 {
