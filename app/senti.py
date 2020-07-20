@@ -127,6 +127,13 @@ print("Sentiment Classifier Trained")
 
 @api.route("/vader/<string:text>")
 class Vader(Resource):
+    def options(self, text):
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "*")
+        response.headers.add("Access-Control-Allow-Methods", "*")
+        return response
+
     @api.expect(model)
     def get(self, text):
         try:
@@ -145,6 +152,13 @@ class Vader(Resource):
 
 @api.route("/bayes/<string:text>")
 class NaiveBayes(Resource):
+    def options(self, text):
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "*")
+        response.headers.add("Access-Control-Allow-Methods", "*")
+        return response
+        
     @api.expect(model)
     def get(self, text):
         try:
