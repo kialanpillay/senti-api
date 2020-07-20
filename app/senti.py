@@ -123,7 +123,7 @@ def vader(test, classifier):
     return score
 
 classifier = train_model()
-print(" * Sentiment Classifier Trained")
+print("Sentiment Classifier Trained")
 
 @api.route("/vader/<string:text>")
 class Vader(Resource):
