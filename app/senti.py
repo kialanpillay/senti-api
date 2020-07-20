@@ -117,7 +117,7 @@ def naive_bayes(text, classifier):
     )
     return classification
 
-def vader(test, classifier):
+def vader(text, classifier):
     sid = SentimentIntensityAnalyzer()
     score = sid.polarity_scores(text)
     return score
