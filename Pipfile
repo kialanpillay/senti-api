@@ -8,6 +8,9 @@ verify_ssl = true
 [packages]
 flask = "*"
 gunicorn = "*"
+requests = "*"
+flask-restplus = "*"
+nltk = "*"
 
 [requires]
 python_version = "3.8"
