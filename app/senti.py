@@ -67,7 +67,7 @@ def vader(text, classifier):
     score = sid.polarity_scores(text)
     return score
 
-saved_classifier = open("naivebayes.pickle", "rb")
+saved_classifier = open("./app/naivebayes.pickle", "rb")
 classifier = pickle.load(saved_classifier)
 saved_classifier.close()
 print("Sentiment Classifier Loaded")
