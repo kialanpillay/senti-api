@@ -2,6 +2,7 @@ import re
 import string
 import random
 import requests
+import pickle
 from flask import Flask, request, jsonify, make_response
 from flask_restx import Api, Resource, fields
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -18,7 +19,6 @@ model = api.model(
     "Senti Model", {"text": fields.String(
         required=True, description="Text to classify")}
 )
-
 
 def remove_noise(tweet_tokens, stop_words=()):
 
@@ -51,61 +51,6 @@ def remove_noise(tweet_tokens, stop_words=()):
             cleaned_tokens.append(token.lower())
     return cleaned_tokens
 
-
-def get_all_words(cleaned_tokens_list):
-    for tokens in cleaned_tokens_list:
-        for token in tokens:
-            yield token
-
-
-def get_tweets_for_model(cleaned_tokens_list):
-    for tweet_tokens in cleaned_tokens_list:
-        yield dict([token, True] for token in tweet_tokens)
-
-
-def train_model():
-    positive_tweets = twitter_samples.strings("positive_tweets.json")
-    negative_tweets = twitter_samples.strings("negative_tweets.json")
-
-    stop_words = stopwords.words("english")
-
-    positive_tweet_tokens = twitter_samples.tokenized("positive_tweets.json")
-    negative_tweet_tokens = twitter_samples.tokenized("negative_tweets.json")
-
-    positive_cleaned_tokens_list = []
-    negative_cleaned_tokens_list = []
-
-    for tokens in positive_tweet_tokens:
-        positive_cleaned_tokens_list.append(remove_noise(tokens, stop_words))
-
-    for tokens in negative_tweet_tokens:
-        negative_cleaned_tokens_list.append(remove_noise(tokens, stop_words))
-
-    all_pos_words = get_all_words(positive_cleaned_tokens_list)
-
-    freq_dist_pos = FreqDist(all_pos_words)
-
-    positive_tokens_for_model = get_tweets_for_model(
-        positive_cleaned_tokens_list)
-    negative_tokens_for_model = get_tweets_for_model(
-        negative_cleaned_tokens_list)
-
-    positive_dataset = [
-        (tweet_dict, "Positive") for tweet_dict in positive_tokens_for_model
-    ]
-
-    negative_dataset = [
-        (tweet_dict, "Negative") for tweet_dict in negative_tokens_for_model
-    ]
-
-    dataset = positive_dataset + negative_dataset
-
-    train_data = dataset
-
-    classifier = NaiveBayesClassifier.train(train_data)
-    return classifier
-
-
 def naive_bayes(text, classifier):
 
     tokens = []
@@ -122,8 +67,10 @@ def vader(text, classifier):
     score = sid.polarity_scores(text)
     return score
 
-classifier = train_model()
-print("Sentiment Classifier Trained")
+saved_classifier = open("naivebayes.pickle", "rb")
+classifier = pickle.load(saved_classifier)
+saved_classifier.close()
+print("Sentiment Classifier Loaded")
 
 @api.route("/vader/<string:text>")
 class Vader(Resource):
