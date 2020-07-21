@@ -65,6 +65,13 @@ def naive_bayes(text, classifier):
 def vader(text, classifier):
     sid = SentimentIntensityAnalyzer()
     score = sid.polarity_scores(text)
+    print(score["compound"])
+    if score["compound"] > 0.05 :
+        score["classification"] = "Positive"
+    elif score["compound"] < -0.05:
+        score["classification"] = "Negative"
+    else:
+        score["classification"] = "Neutral"
     return score
 
 saved_classifier = open("./app/naivebayes.pickle", "rb")
@@ -111,7 +118,7 @@ class NaiveBayes(Resource):
         try:
             result = naive_bayes(text, classifier)
             classification = {
-                "compound": result,
+                "classification": result,
             }
             response = jsonify(
                 {
