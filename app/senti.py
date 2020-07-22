@@ -6,6 +6,7 @@ import pickle
 import logging
 import boto3
 import uuid
+import os
 from datetime import datetime
 from flask import Flask, request, jsonify, make_response
 from flask_restx import Api, Resource, fields
@@ -96,8 +97,12 @@ def vader(text, classifier):
     return score
 
 def put(item):
-
-    dynamodb = boto3.resource('dynamodb')
+    dynamodb = boto3.resource('dynamodb',
+        region_name='us-east-1',
+        aws_access_key_id=os.environ['DYNAMODB_KEY'],
+        aws_secret_access_key=os.environ['DYNAMODB_SECRET'])
+    print(os.environ['DYNAMODB_SECRET'])
+    #dynamodb = boto3.resource('dynamodb')
     id = str(uuid.uuid1())
     dt = str(datetime.utcnow())
 
