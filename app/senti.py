@@ -101,8 +101,6 @@ def put(item):
         region_name='us-east-1',
         aws_access_key_id=os.environ['DYNAMODB_KEY'],
         aws_secret_access_key=os.environ['DYNAMODB_SECRET'])
-    print(os.environ['DYNAMODB_SECRET'])
-    #dynamodb = boto3.resource('dynamodb')
     id = str(uuid.uuid1())
     dt = str(datetime.utcnow())
 
