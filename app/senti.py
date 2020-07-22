@@ -3,6 +3,10 @@ import string
 import random
 import requests
 import pickle
+import logging
+import boto3
+import uuid
+from datetime import datetime
 from flask import Flask, request, jsonify, make_response
 from flask_restx import Api, Resource, fields
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -15,10 +19,27 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 app = Flask(__name__)
 api = Api(app=app, version="1.0", title="Senti API")
 
-model = api.model(
-    "Senti Model", {"text": fields.String(
+get_request = api.model(
+    "GET Request", {"text": fields.String(
         required=True, description="Text to classify")}
 )
+
+get_response = api.model("GET Response", {
+    "classification": fields.String(required=True, description="Sentiment classification"),
+    "pos": fields.Float(required=True, description="Positive score"),
+    "neg": fields.Float(required=True, description="Negative score"),
+    "neu": fields.Float(required=True, description="Neutral score")
+})
+
+put_request = api.model('PUT Request', {
+    'user': fields.String(required=True, description="Authenticated user"),
+    'phrase': fields.String(required=True, description="User phrase"),
+    'sentiment': fields.String(required=True, description="User sentiment"),
+})
+
+class Item(fields.Raw):
+    def format(self, value):
+        return {'user': value.user, 'phrase': value.phrase, 'sentiment': value.sentiment}
 
 def remove_noise(tweet_tokens, stop_words=()):
 
@@ -74,10 +95,55 @@ def vader(text, classifier):
         score["classification"] = "Neutral"
     return score
 
+def put(item):
+
+    dynamodb = boto3.resource('dynamodb')
+    id = str(uuid.uuid1())
+    dt = str(datetime.utcnow())
+
+    table = dynamodb.Table('senti-corpus')
+    response = table.put_item(
+       Item={
+            'uuid': id,
+            'datetime': dt,
+            'user': item['user'],
+            'phrase': item['phrase'],
+            'sentiment': item['sentiment'],
+
+        }
+    )
+    logging.info("Inserted item into DynamoDB table")
+    return response
+
 saved_classifier = open("./app/naivebayes.pickle", "rb")
 classifier = pickle.load(saved_classifier)
 saved_classifier.close()
 print("Sentiment Classifier Loaded")
+
+@api.route("/corpus")
+class Corpus(Resource):
+
+    def options(self):
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "*")
+        response.headers.add("Access-Control-Allow-Methods", "*")
+        return response
+
+    def put(self):
+        try:
+            item = request.get_json()
+            put(item)
+            response = jsonify(
+                {
+                    "statusCode": 200,
+                    "status": "Successful",
+                }
+            )
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            return response
+        except Exception as error:
+            return jsonify({"statusCode": 500, "status": "Error", "error": str(error)})
 
 @api.route("/vader/<string:text>")
 class Vader(Resource):
@@ -88,7 +154,8 @@ class Vader(Resource):
         response.headers.add("Access-Control-Allow-Methods", "*")
         return response
 
-    @api.expect(model)
+    @api.expect(get_request)
+    @api.marshal_with(get_response)
     def get(self, text):
         try:
             classification = vader(text, classifier)
@@ -112,8 +179,9 @@ class NaiveBayes(Resource):
         response.headers.add("Access-Control-Allow-Headers", "*")
         response.headers.add("Access-Control-Allow-Methods", "*")
         return response
-        
-    @api.expect(model)
+
+    @api.expect(get_request)
+    @api.marshal_with(get_response)
     def get(self, text):
         try:
             result = naive_bayes(text, classifier)

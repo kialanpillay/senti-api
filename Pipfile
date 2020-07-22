@@ -11,6 +11,8 @@ gunicorn = "*"
 requests = "*"
 nltk = "*"
 flask-restx = "*"
+boto3 = "*"
+awscli = "*"
 
 [requires]
 python_version = "3.8"
