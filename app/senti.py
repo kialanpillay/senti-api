@@ -181,7 +181,6 @@ class Vader(Resource):
         return response
 
     @api.expect(get_request)
-    @api.marshal_with(get_response)
     def get(self, text):
         try:
             classification = vader(text, classifier)
@@ -207,7 +206,6 @@ class NaiveBayes(Resource):
         return response
 
     @api.expect(get_request)
-    @api.marshal_with(get_response)
     def get(self, text):
         try:
             result = naive_bayes(text, classifier)
