@@ -87,7 +87,6 @@ def naive_bayes(text, classifier):
 def vader(text, classifier):
     sid = SentimentIntensityAnalyzer()
     score = sid.polarity_scores(text)
-    print(score["compound"])
     if score["compound"] > 0.05 :
         score["classification"] = "Positive"
     elif score["compound"] < -0.05:
@@ -217,6 +216,33 @@ class NaiveBayes(Resource):
                     "statusCode": 200,
                     "status": "Successful",
                     "classification": classification,
+                }
+            )
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            return response
+        except Exception as error:
+            return jsonify({"statusCode": 500, "status": "Error", "error": str(error)})
+
+@api.route("/bulk")
+class Bulk(Resource):
+    def options(self):
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "*")
+        response.headers.add("Access-Control-Allow-Methods", "*")
+        return response
+
+    def post(self):
+        try:
+            payload = request.get_json()
+            classification = []
+            for document in payload['documents']:
+                classification.append(vader(document['text'], classifier))
+            response = jsonify(
+                {
+                    "statusCode": 200,
+                    "status": "Successful",
+                    "bulkClassification": classification,
                 }
             )
             response.headers.add("Access-Control-Allow-Origin", "*")
