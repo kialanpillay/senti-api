@@ -118,6 +118,14 @@ def put(item):
     logging.info("Inserted item into DynamoDB table")
     return response
 
+def item_count():
+    dynamodb = boto3.resource('dynamodb',
+        region_name='us-east-1',
+        aws_access_key_id=os.environ['DYNAMODB_KEY'],
+        aws_secret_access_key=os.environ['DYNAMODB_SECRET'])
+    table = dynamodb.Table('senti-corpus')
+    return table.item_count
+
 saved_classifier = open("./app/naivebayes.pickle", "rb")
 classifier = pickle.load(saved_classifier)
 saved_classifier.close()
@@ -141,6 +149,21 @@ class Corpus(Resource):
                 {
                     "statusCode": 200,
                     "status": "Successful",
+                }
+            )
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            return response
+        except Exception as error:
+            return jsonify({"statusCode": 500, "status": "Error", "error": str(error)})
+
+    def get(self):
+        try:
+            count = item_count()
+            response = jsonify(
+                {
+                    "statusCode": 200,
+                    "status": "Successful",
+                    "count": count
                 }
             )
             response.headers.add("Access-Control-Allow-Origin", "*")
