@@ -158,6 +158,15 @@ def vader(text):
     return score
 
 def insert(item):
+    """
+    Inserts and open-source Gen Z corpus submission into a DynamoDB table instance.
+    Parameters
+    ----------
+    item (dict): Corpus record to insert
+    Returns
+    -------
+    None
+    """
     dynamodb = boto3.resource('dynamodb',
         region_name='us-east-1',
         aws_access_key_id=os.environ['DYNAMODB_KEY'],
@@ -236,6 +245,15 @@ class Corpus(Resource):
         return response
 
     def put(self):
+        """
+        Recevies a payload (phrase-sentiment submission) from a client
+        and inserts it into the DynamoDB Table.
+        Parameters
+        ----------
+        Returns
+        -------
+        JSON Object
+        """
         try:
             item = request.get_json()
             insert(item)
@@ -424,6 +442,16 @@ class Bulk(Resource):
         return response
 
     def post(self):
+        """
+        Receives an array of documents and analyses each document's contents
+        using the VADER algorithm, returning the classification and polarity scores
+        for each requested document.
+        Parameters
+        ----------
+        Returns
+        -------
+        JSON Object
+        """
         try:
             payload = request.get_json()
             classification = []
