@@ -244,7 +244,7 @@ class Corpus(Resource):
         response.headers.add("Access-Control-Allow-Methods", "*")
         return response
 
-    def put(self):
+    def post(self):
         """
         Recevies a payload (phrase-sentiment submission) from a client
         and inserts it into the DynamoDB Table.
@@ -457,7 +457,7 @@ class Bulk(Resource):
             classification = []
             # Processing of each document
             for document in payload['documents']:
-                classification.append(vader(document['text'], classifier))
+                classification.append(vader(document['text']))
             response = jsonify(
                 {
                     "statusCode": 200,
