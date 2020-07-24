@@ -427,15 +427,6 @@ class Bulk(Resource):
         for each requested document.
     """
     def options(self):
-        """
-        Returns a response with HTTP headers to a pre-flight request
-        to allow for Cross-Origin Resource Sharing (CORS).
-        Parameters
-        ----------
-        Returns
-        -------
-        JSON Object
-        """
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Headers", "*")
@@ -443,20 +434,9 @@ class Bulk(Resource):
         return response
 
     def put(self):
-        """
-        Receives an array of documents and analyses each document's contents
-        using the VADER algorithm, returning the classification and polarity scores
-        for each requested document.
-        Parameters
-        ----------
-        Returns
-        -------
-        JSON Object
-        """
         try:
             payload = request.get_json()
             classification = []
-            # Processing of each document
             for document in payload['documents']:
                 classification.append(vader(document['text'], classifier))
             response = jsonify(
