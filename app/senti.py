@@ -95,7 +95,7 @@ def vader(text, classifier):
         score["classification"] = "Neutral"
     return score
 
-def put(item):
+def insert(item):
     dynamodb = boto3.resource('dynamodb',
         region_name='us-east-1',
         aws_access_key_id=os.environ['DYNAMODB_KEY'],
@@ -140,10 +140,10 @@ class Corpus(Resource):
         response.headers.add("Access-Control-Allow-Methods", "*")
         return response
 
-    def put(self):
+    def post(self):
         try:
             item = request.get_json()
-            put(item)
+            insert(item)
             response = jsonify(
                 {
                     "statusCode": 200,
@@ -232,7 +232,7 @@ class Bulk(Resource):
         response.headers.add("Access-Control-Allow-Methods", "*")
         return response
 
-    def post(self):
+    def put(self):
         try:
             payload = request.get_json()
             classification = []
