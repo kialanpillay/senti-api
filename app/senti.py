@@ -24,7 +24,9 @@ corpus contributions.
 
 Classes:
     Item
+    Document
     Corpus
+    Bayes
     Vader
     Bulk
 """
@@ -33,33 +35,46 @@ Classes:
 app = Flask(__name__)
 api = Api(app=app, version="1.0", title="Senti API")
 
-#Logging Config
+# Logging Config
 logging.basicConfig(format='%(asctime)s - [%(levelname)s] %(message)s',
-                        datefmt='%d-%b-%y %H:%M:%S',
-                        level=logging.INFO)
+                    datefmt='%d-%b-%y %H:%M:%S',
+                    level=logging.INFO)
 
 # API Models
-get_request = api.model(
-    "GET Request", {"text": fields.String(
+sentiment_analysis_resource = api.model(
+    "Sentiment Analysis Resource", {"text": fields.String(
         required=True, description="Text to classify")}
 )
 
-get_response = api.model("GET Response", {
+sentiment_analysis_response = api.model("Sentiment Analysis Response", {
     "classification": fields.String(required=True, description="Sentiment classification"),
     "pos": fields.Float(required=True, description="Positive score"),
     "neg": fields.Float(required=True, description="Negative score"),
     "neu": fields.Float(required=True, description="Neutral score")
 })
 
-put_request = api.model('PUT Request', {
+bayes_analysis_response = api.model("Bayes Sentiment Analysis Response", {
+    "classification": fields.String(required=True, description="Sentiment classification"),
+})
+
+corpus_resource = api.model('Corpus Resource', {
     'user': fields.String(required=True, description="Authenticated user"),
     'phrase': fields.String(required=True, description="User phrase"),
     'sentiment': fields.String(required=True, description="User sentiment"),
 })
 
+corpus_response = api.model('Corpus Response', {
+    'count': fields.Integer(required=True, description="Table record count"),
+})
+
+bulk_resource_document = api.model('Bulk Resource', {
+    'text': fields.String(required=True, description="Document to classify"),
+})
+
+
 class Item(fields.Raw):
     """
-    A class that represents a POST request payload.
+    A class that represents a Corpus POST request payload.
     ...
     Attributes
     ----------
@@ -70,8 +85,28 @@ class Item(fields.Raw):
     format(self, value):
         Returns a dictionary of attributes.
     """
+
     def format(self, value):
         return {'user': value.user, 'phrase': value.phrase, 'sentiment': value.sentiment}
+
+
+class Document(fields.Raw):
+    """
+    A class that represents a Bulk POST request payload.
+    ...
+    Attributes
+    ----------
+    value: dict
+        request object
+    Methods
+    -------
+    format(self, value):
+        Returns a dictionary of attributes.
+    """
+
+    def format(self, value):
+        return {'text': value.text}
+
 
 def remove_noise(tokens, stop_words=()):
     """
@@ -113,6 +148,7 @@ def remove_noise(tokens, stop_words=()):
             cleaned_tokens.append(token.lower())
     return cleaned_tokens
 
+
 def naive_bayes(text, classifier):
     """
     Classifies text using a pre-trained Naive Bayes classifier and returns
@@ -125,12 +161,13 @@ def naive_bayes(text, classifier):
     -------
     String
     """
-    #Token cleaning
+    # Token cleaning
     text_tokens = remove_noise(word_tokenize(text))
     classification = classifier.classify(
         dict([token, True] for token in text_tokens)
     )
     return classification
+
 
 def vader(text):
     """
@@ -144,18 +181,19 @@ def vader(text):
     -------
     dict
     """
-    #Create SentimentIntensityAnalyzer (using VADER) object
+    # Create SentimentIntensityAnalyzer (using VADER) object
     sid = SentimentIntensityAnalyzer()
-    #Analyse text
+    # Analyse text
     score = sid.polarity_scores(text)
     # Convert float value to String for client-side rendering
-    if score["compound"] > 0.05 :
+    if score["compound"] > 0.05:
         score["classification"] = "Positive"
     elif score["compound"] < -0.05:
         score["classification"] = "Negative"
     else:
         score["classification"] = "Neutral"
     return score
+
 
 def insert(item):
     """
@@ -168,15 +206,15 @@ def insert(item):
     None
     """
     dynamodb = boto3.resource('dynamodb',
-        region_name='us-east-1',
-        aws_access_key_id=os.environ['DYNAMODB_KEY'],
-        aws_secret_access_key=os.environ['DYNAMODB_SECRET'])
+                              region_name='us-east-1',
+                              aws_access_key_id=os.environ['DYNAMODB_KEY'],
+                              aws_secret_access_key=os.environ['DYNAMODB_SECRET'])
     id = str(uuid.uuid1())
     dt = str(datetime.utcnow())
-    #DynamoDB put_item operation
+    # DynamoDB put_item operation
     table = dynamodb.Table('senti-corpus')
     response = table.put_item(
-       Item={
+        Item={
             'uuid': id,
             'datetime': dt,
             'user': item['user'],
@@ -188,6 +226,7 @@ def insert(item):
     logging.info("Inserted item into DynamoDB table")
     return response
 
+
 def item_count():
     """
     Retrieves the approximate record count from a DynamoDB table.
@@ -198,19 +237,22 @@ def item_count():
     int
     """
     dynamodb = boto3.resource('dynamodb',
-        region_name='us-east-1',
-        aws_access_key_id=os.environ['DYNAMODB_KEY'],
-        aws_secret_access_key=os.environ['DYNAMODB_SECRET'])
+                              region_name='us-east-1',
+                              aws_access_key_id=os.environ['DYNAMODB_KEY'],
+                              aws_secret_access_key=os.environ['DYNAMODB_SECRET'])
     table = dynamodb.Table('senti-corpus')
     return table.item_count
 
-#Loads pre-trained classifier from .pickle file
+
+# Loads pre-trained classifier from .pickle file
 saved_classifier = open("./app/naivebayes.pickle", "rb")
 classifier = pickle.load(saved_classifier)
 saved_classifier.close()
 logging.info("Sentiment Classifier Loaded")
 
+
 @api.route("/corpus")
+@api.header("Access-Control-Allow-Origin", "*")
 class Corpus(Resource):
     """
     A class that represents the /corpus API endpoint.
@@ -228,6 +270,9 @@ class Corpus(Resource):
     get(self):
         Returns a response containing the record count of the DynamoDB Table.
     """
+    @api.response(200, 'Success', headers={"Access-Control-Allow-Origin": "*",
+                                           "Access-Control-Allow-Headers": "*",
+                                           "Access-Control-Allow-Methods": "GET, POST, OPTIONS"})
     def options(self):
         """
         Returns a response with HTTP headers to a pre-flight request
@@ -241,9 +286,13 @@ class Corpus(Resource):
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Headers", "*")
-        response.headers.add("Access-Control-Allow-Methods", "*")
+        response.headers.add(
+            "Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         return response
 
+    @api.expect(corpus_resource)
+    @api.response(200, 'Success')
+    @api.response(500, 'Server Error')
     def post(self):
         """
         Recevies a payload (phrase-sentiment submission) from a client
@@ -268,6 +317,8 @@ class Corpus(Resource):
         except Exception as error:
             return jsonify({"statusCode": 500, "status": "Error", "error": str(error)})
 
+    @api.response(200, 'Success', corpus_response)
+    @api.response(500, 'Server Error')
     def get(self):
         """
         Returns a response containing the record count of the DynamoDB Table.
@@ -291,7 +342,9 @@ class Corpus(Resource):
         except Exception as error:
             return jsonify({"statusCode": 500, "status": "Error", "error": str(error)})
 
+
 @api.route("/vader/<string:text>")
+@api.header("Access-Control-Allow-Origin", "*")
 class Vader(Resource):
     """
     A class that represents the /vader API endpoint.
@@ -307,6 +360,9 @@ class Vader(Resource):
         Returns a response containing the classification and polarity scores
         for a particular text string using the VADER algorithm.
     """
+    @api.response(200, 'Success', headers={"Access-Control-Allow-Origin": "*",
+                                           "Access-Control-Allow-Headers": "*",
+                                           "Access-Control-Allow-Methods": "GET, OPTIONS"})
     def options(self, text):
         """
         Returns a response with HTTP headers to a pre-flight request
@@ -320,10 +376,12 @@ class Vader(Resource):
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Headers", "*")
-        response.headers.add("Access-Control-Allow-Methods", "*")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
         return response
 
-    @api.expect(get_request)
+    @api.expect(sentiment_analysis_resource)
+    @api.response(200, 'Success', sentiment_analysis_response)
+    @api.response(500, 'Server Error')
     def get(self, text):
         """
         Returns a response containing the classification and polarity scores
@@ -348,7 +406,9 @@ class Vader(Resource):
         except Exception as error:
             return jsonify({"statusCode": 500, "status": "Error", "error": str(error)})
 
+
 @api.route("/bayes/<string:text>")
+@api.header("Access-Control-Allow-Origin", "*")
 class NaiveBayes(Resource):
     """
     A class that represents the /bayes API endpoint.
@@ -364,6 +424,9 @@ class NaiveBayes(Resource):
         Returns a response containing the sentiment classification
         for a particular text string using a pre-trained naive bayes classifier.
     """
+    @api.response(200, 'Success', headers={"Access-Control-Allow-Origin": "*",
+                                           "Access-Control-Allow-Headers": "*",
+                                           "Access-Control-Allow-Methods": "GET, OPTIONS"})
     def options(self, text):
         """
         Returns a response with HTTP headers to a pre-flight request
@@ -377,10 +440,12 @@ class NaiveBayes(Resource):
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Headers", "*")
-        response.headers.add("Access-Control-Allow-Methods", "*")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
         return response
 
-    @api.expect(get_request)
+    @api.expect(sentiment_analysis_resource)
+    @api.response(200, 'Success', bayes_analysis_response)
+    @api.response(500, 'Server Error')
     def get(self, text):
         """
         Returns a response containing the sentiment classification
@@ -408,7 +473,9 @@ class NaiveBayes(Resource):
         except Exception as error:
             return jsonify({"statusCode": 500, "status": "Error", "error": str(error)})
 
+
 @api.route("/bulk")
+@api.header("Access-Control-Allow-Origin", "*")
 class Bulk(Resource):
     """
     A class that represents the /bulk API endpoint.
@@ -420,11 +487,14 @@ class Bulk(Resource):
     options(self):
         Returns a response with HTTP headers to a pre-flight request
         to allow for Cross-Origin Resource Sharing (CORS).
-    put(self):
+    post(self):
         Receives an array of documents and analyses each document's contents
         using the VADER algorithm, returning the classification and polarity scores
         for each requested document.
     """
+    @api.response(200, 'Success', headers={"Access-Control-Allow-Origin": "*",
+                                           "Access-Control-Allow-Headers": "*",
+                                           "Access-Control-Allow-Methods": "POST, OPTIONS"})
     def options(self):
         """
         Returns a response with HTTP headers to a pre-flight request
@@ -438,9 +508,12 @@ class Bulk(Resource):
         response = make_response()
         response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Headers", "*")
-        response.headers.add("Access-Control-Allow-Methods", "*")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
         return response
 
+    @api.expect([bulk_resource_document])
+    @api.response(200, 'Success', [sentiment_analysis_response])
+    @api.response(500, 'Server Error')
     def post(self):
         """
         Receives an array of documents and analyses each document's contents

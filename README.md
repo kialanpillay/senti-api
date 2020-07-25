@@ -41,7 +41,7 @@ To run the server locally (```localhost:5000```), run the following command in t
 This will start the server in development mode. Server logs will be printed to console.
 
 ## UCT DevSoc Competition Notes
-Senti API is hosted on a free-plan Heroku dyno, and thus the server only spins-up on user request. The consequence of this is that an initial cold-start request is often much slower than subsequent API calls, so please do be patient. The API documentation is by no means comprehensive, and needs to still be expanded upon.
+Senti API is hosted on a free-plan Heroku dyno, and thus the server only spins-up on user request. The consequence of this is that an initial cold-start request is often much slower than subsequent API calls, so please do be patient. 
 Secrets management for the AWS DynamoDB backend integration is acheived using Heroku Environment Variables.
 
 Senti API primarily leverages Flask and NLTK to provide its functionality, and boto3 for AWS integration. NLTK data is downloaded into the production environment on Heroku. Although a pickled classifier is used for production to prevent constant training of the classifier on server startup, the source code for model training using the NLTK tweets dataset is also present in the repo for perusal. All the source code is documented comprehensively and confirms to PEP standards. Additional comments are also present when deemed essential.
