@@ -10,9 +10,13 @@ Senti API is also backed by a AWS DynamoDB database which is currently used to p
 
 ## Endpoints
 ```GET /bayes/{text}``` - This endpoint will return a sentiment classification for a requested string of text. Note that the Naive Bayes classifier does not produce polarity scores.
+
 ```GET /vader/{text}``` - This endpoint will return a sentiment classification and polarity scores for a requested string of text.
+
 ```POST /bulk``` - This endpoint will return the sentiment classification and polarity scores for a array of requested documents (text).
+
 ```POST /corpus``` - This endpoint will receive a phrase submission from a client and insert it into a DynamoDB table.
+
 ```GET /corpus``` - This endpoint will return the record count of a DynamoDB table. Note that counts are only updated every six hours as per the DynamoDB documentation.
 
 ## Run
