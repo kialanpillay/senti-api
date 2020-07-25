@@ -31,11 +31,13 @@ flask
 flask_restx
 nltk
 
-You will also need to install the NLTK data packages listed in ```nltk.txt```
+You will also need to install the NLTK data packages listed in ```nltk.txt```.
 See this [documentation](https://www.nltk.org/data.html) for more information.
 
-To run the server locally (```localhost:5000```), run the following command in terminal
+To run the server locally (```localhost:5000```), run the following command in terminal:
+
 ```python3 wsgi.py```
+
 This will start the server in development mode. Server logs will be printed to console.
 
 ## UCT DevSoc Competition Notes
