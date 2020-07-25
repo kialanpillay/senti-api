@@ -16,14 +16,17 @@ Senti API is also backed by a AWS DynamoDB database which is currently used to p
 ```GET /corpus``` - This endpoint will return the record count of a DynamoDB table. Note that counts are only updated every six hours as per the DynamoDB documentation.
 
 ## Run
-Dependencies:
-```re```
-```requests```
-```boto3```
-```uuid```
-```flask```
-```flask_restx```
-```nltk```
+Install the following Python packages using ```pip```
+|Dependencies|
+|------------|
+re
+requests
+boto3
+uuid
+flask
+flask_restx
+nltk
+
 To run the server locally (```localhost:5000```), run the following command in terminal
 ```python3 wsgi.py```
 This will start the server in development mode. Server logs will be printed to console.
