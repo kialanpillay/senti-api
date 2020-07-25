@@ -9,6 +9,11 @@ from nltk.tokenize import word_tokenize
 from nltk import FreqDist, classify, NaiveBayesClassifier
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
+"""
+Script that trains a Naive Bayes sentiment classifier using a Twitter dataset
+from NLTK Data, and pickles the trained classifier for use by Senti API.
+"""
+
 def remove_noise(tweet_tokens, stop_words=()):
     """
     Removes noise from a list of text tokens using regular expressions
